@@ -71,16 +71,21 @@ compile_article() {
     # Output file has md replaced with html extension
     output_file="$(echo $file | sed "s/md$/html/g")"
     output_path="$OUTPUT_DIR/$output_file"
+
+    # Tags:
     export html_file="$(markdown $file_path)"
     # Get the title of the article to substitute into the template.
     export html_title="$(head -n 1 $file_path | sed 's/# //g')"
-    
+    # Time the article takes to read, 200 words per minute.
+    export reading_time="$(expr $(echo $html_file | wc -w) / 200) minutes"
+
     # This embedded perl script scans every line for a title and article tag
     # and substitutes it with the html file content. It then pipes it into
     # the output path.
     perl -pe '
         s/{title}/$ENV{html_title}/g;
         s/{article}/$ENV{html_file}/g;
+        s/{time}/$ENV{reading_time}/g;
     ' "$TEMPLATE_FILE" > $output_path
 
     echo "compiled article: $output_path"
