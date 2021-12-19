@@ -5,6 +5,12 @@
 # Compiles articles from the article directory, turns them into
 # html and places them into Source/articles directory.
 
+function println() {
+    if [ "$VERBOSE" == "1" ]; then
+        echo $@
+    fi
+}
+
 function show_help() {
     echo "compile-articles.sh script by Yiannis Charalambous 2021
     This script is used to convert markdown files into static html files.
@@ -23,6 +29,7 @@ function show_help() {
 ARTICLES_DIR="articles"
 OUTPUT_DIR="Source/articles"
 TEMPLATE_FILE="article_template.html"
+VERBOSE="1"
 
 # Arg processing
 
@@ -46,6 +53,10 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
+        -q|--quiet)
+            VERBOSE="0"
+            shift
+            ;;
         -h|--help)
             show_help
             exit
@@ -63,32 +74,109 @@ then
     show_help
 fi
 
+ARTICLES_DIR="articles"
+OUTPUT_DIR="Source/articles"
+TEMPLATE_FILE="article_template.html"
+VERBOSE="1"
+
+println "Articles Directory: $ARTICLES_DIR"
+println "Output Directory  : $OUTPUT_DIR"
+println "Template File     : $TEMPLATE_FILE"
+println "Verbosity         : $VERBOSE"
+println
+println "Starting to compile articles..."
+println
+
+# Reads and removes the params ... endparams section of the article.
+# Returns 0 if everything went smoothly.
+# Returns 1 if there's no param keyword found on the first line.
+preprocess_article() {
+    local md_content="$1"
+    # Check if first line is params, if not then quit.
+    # Need to do this because command substitution removes newlines
+    # and replaces them with space.
+    IFS=$''
+    if [ "$(echo $md_content | head -n 1)" != "params" ];
+    then
+        return 1
+    fi
+    
+    # Find what line the end params occurs
+    end_line_index="0"
+    local line_count="0"
+    # Printf '%s\n' "$var" is necessary because printf '%s' "$var" on a
+    # variable that doesn't end with a newline then the while loop will
+    # completely miss the last line of the variable.
+    while IFS= read -r line
+    do
+         # Check for end block
+        if [ "$line" == "endparams" ];
+        then
+            end_line_index="$line_count"
+            break
+        fi
+
+        let "line_count++"
+    done < <(printf '%s\n' "$md_content")
+
+    IFS=$''
+    local params_content="$(echo $md_content | head -n $line_count)"
+    # Remove params keyword. No need to remove endparams since it is already
+    # excluded.
+    params_content="$(echo $params_content | tail -n +2)"
+
+    function extract_value() {
+        local param="$(echo $params_content | grep $1)"
+        local search=":"
+        local index=$(expr index "$param" "$search")
+        echo ${param:index} | xargs
+    }
+
+    # Set variables from parameters
+    local val=""
+    val=$(extract_value "title") title=${val:-$title}
+    # val=$(extract_value "template_overwrite") template_overwrite=${val:-$template_overwrite}
+    val=$(extract_value "author") author=title=${val:-$author}
+
+    unset IFS
+
+    return 0
+}
+
 compile_article() {
     # Path to the file
-    file_path="$1"
+    local file_path="$1"
     # Name of the file
-    file="$(basename $1)"
+    local file_name="$(basename $1)"
     # Output file has md replaced with html extension
-    output_file="$(echo $file | sed "s/md$/html/g")"
-    output_path="$OUTPUT_DIR/$output_file"
+    local output_file="$(echo $file_name | sed "s/md$/html/g")"
+    local output_path="$OUTPUT_DIR/$output_file"
 
-    # Tags:
-    export html_file="$(markdown $file_path)"
-    # Get the title of the article to substitute into the template.
-    export html_title="$(head -n 1 $file_path | sed 's/# //g')"
-    # Time the article takes to read, 200 words per minute.
-    export reading_time="$(expr $(echo $html_file | wc -w) / 200) minutes"
+    # Default variable values set here.
+    export title=""
+    export reading_time="$(expr $(cat $file_path | wc -w) / 200) minutes"
 
-    # This embedded perl script scans every line for a title and article tag
-    # and substitutes it with the html file content. It then pipes it into
-    # the output path.
+    # Run the preprocessor to extract all meta data.
+    preprocess_article "$(cat $file_path)"
+    preprocess_result=$?
+
+    # Need to remove the param block if the preprocessor found it.
+    html_article="$(cat $file_path | markdown)"
+    if [ "$preprocess_result" -eq "0" ]; then
+        IFS=$''
+        html_article=$(echo $html_article | tail -n +$(($end_line_index+2)))
+        unset IFS
+    fi
+    export html_article
+
     perl -pe '
-        s/{title}/$ENV{html_title}/g;
-        s/{article}/$ENV{html_file}/g;
+        s/{article}/$ENV{html_article}/g;
         s/{time}/$ENV{reading_time}/g;
+        
+        s/{title}/$ENV{title}/g;
     ' "$TEMPLATE_FILE" > $output_path
 
-    echo "compiled article: $output_path"
+    println "compiled article: $output_path"
 }
 
 # Scan every file and folder inside the articles directory.
@@ -97,19 +185,17 @@ for file in $ARTICLES_DIR/*; do
     # it needs to be compiled, else it needs to be just copied.
     if [[ "$file" == *".md" ]];
     then
-        echo "compiling: $file"
+        println "compiling: $file"
         compile_article $file
-        echo
+        println
     else
         # If it is a directory then copy the directory.
         if [ -d "$file" ];
         then
-            echo "copying dir: $file"
-            echo "to: $OUTPUT_DIR"
+            println "copying dir: $file"
+            println "to: $OUTPUT_DIR"
             cp -r $file $OUTPUT_DIR
-            echo
+            println
         fi
     fi
 done
-
-
