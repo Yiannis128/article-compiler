@@ -53,5 +53,3 @@ preprocess_article() {
 
     return 0
 }
-
-echo "loaded article-compiler-preprocessor.sh"
