@@ -47,7 +47,7 @@ function show_help() {
 
 ARTICLES_DIR="articles"
 OUTPUT_PATH="Source/articles.html"
-VERBOSE="1"
+VERBOSE="0"
 DEFAULT_CATEGORY_NAME="Other"
 
 INDEX_TEMPLATE_FILE="article_template_index.html"
