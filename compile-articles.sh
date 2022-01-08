@@ -35,7 +35,7 @@ function show_help() {
 ARTICLES_DIR="articles"
 OUTPUT_DIR="Source/articles"
 TEMPLATE_FILE="article_template.html"
-VERBOSE="1"
+VERBOSE="0"
 
 # Arg processing
 
@@ -59,8 +59,8 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
-        -q|--quiet)
-            VERBOSE="0"
+        -v|--verbose)
+            VERBOSE="1"
             shift
             ;;
         -h|--help)
