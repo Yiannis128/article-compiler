@@ -34,7 +34,7 @@ function show_help() {
 
 ARTICLES_DIR="articles"
 OUTPUT_DIR="Source/articles"
-TEMPLATE_FILE="article_template.html"
+TEMPLATE_FILE="article-compiler/article_template.html"
 VERBOSE="0"
 
 # Arg processing

@@ -50,9 +50,9 @@ OUTPUT_PATH="Source/articles.html"
 VERBOSE="0"
 DEFAULT_CATEGORY_NAME="Other"
 
-INDEX_TEMPLATE_FILE="article_template_index.html"
-CATEGORY_TEMPLATE_FILE="article_template_index_category.html"
-ELEMENT_TEMPLATE_FILE="article_template_index_element.html"
+INDEX_TEMPLATE_FILE="article-compiler/article_template_index.html"
+CATEGORY_TEMPLATE_FILE="article-compiler/article_template_index_category.html"
+ELEMENT_TEMPLATE_FILE="article-compiler/article_template_index_element.html"
 
 # Arg processing
 
